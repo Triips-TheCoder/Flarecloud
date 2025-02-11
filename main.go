@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -11,7 +12,11 @@ import (
 
 func main() {
 	client := database.ConnectMongoDB()
-	defer client.Disconnect(nil)
+	defer func() {
+		if err := client.Disconnect(context.Background()); err != nil {
+			log.Printf("Error disconnecting MongoDB client: %v", err)
+		}
+	}()	
 
 	http.Handle("/health", middleware.LoggingMiddleware(http.HandlerFunc(handlers.HealthHandler)))
 	log.Println("Server started on :8080")
