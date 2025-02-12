@@ -10,10 +10,12 @@ import (
 )
 
 func main() {
+	// env.LoadEnv()
 	client := database.ConnectMongoDB()
 	defer client.Disconnect(nil)
 
 	http.Handle("/health", middleware.LoggingMiddleware(http.HandlerFunc(handlers.HealthHandler)))
+	// http.Handle("/articles", middleware.LoggingMiddleware(http.HandlerFunc(handlers.PostArticleHandler)))
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

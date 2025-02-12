@@ -16,9 +16,9 @@ spec:
         - name: go-backend
           image: go-backend:latest
           imagePullPolicy: Never
-          env:
-            - name: MONGO_URI
-              value: "mongodb://mongo-service:27017"
+          envFrom:
+            - secretRef:
+                name: go-backend-secrets
           ports:
             - containerPort: 8080
 
@@ -40,5 +40,8 @@ spec:
       containers:
         - name: mongo
           image: mongo
+          envFrom:
+            - secretRef:
+                name: mongodb-secrets
           ports:
             - containerPort: 27017
