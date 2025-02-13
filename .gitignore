@@ -40,3 +40,8 @@ go.work
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+## data folders
+minio_data/
+mongo_data/
+uploads/

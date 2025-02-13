@@ -18,10 +18,17 @@ func main() {
 		if err := client.Disconnect(context.Background()); err != nil {
 			log.Printf("Error disconnecting MongoDB client: %v", err)
 		}
-	}()	
+	}()
 
-    http.Handle("/health", middleware.LoggingMiddleware(middleware.LimitMiddleware(http.HandlerFunc(handlers.HealthHandler))))
+	handlers.InitMinio()
+
+  http.Handle("/health", middleware.LoggingMiddleware(middleware.LimitMiddleware(http.HandlerFunc(handlers.HealthHandler))))
 	http.HandleFunc("/captcha", handlers.CaptchaHandler)
+
+	http.HandleFunc("/upload", handlers.UploadFileHandler)
+	http.HandleFunc("/download", handlers.DownloadFileHandler)
+	http.HandleFunc("/delete", handlers.DeleteFileHandler)
+	http.HandleFunc("/list", handlers.ListFilesHandler)
 
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
