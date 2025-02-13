@@ -6,11 +6,13 @@ import (
 	"net/http"
 
 	"flarecloud/internal/database"
+	"flarecloud/internal/env"
 	"flarecloud/internal/handlers"
 	"flarecloud/internal/middleware"
 )
 
 func main() {
+	env.LoadEnv()
 	client := database.ConnectMongoDB()
 	defer func() {
 		if err := client.Disconnect(context.Background()); err != nil {

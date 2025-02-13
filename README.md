@@ -61,10 +61,50 @@ The goal is to design a CDN server capable of:
    go test ./...
    ```
 
+## Run with Kubernetes
+
+1. **Start Minikube and add Ingress:**
+
+   ```bash
+   minikube start --driver=docker
+   minikube addons enable ingress
+   ```
+
+2. **Build the backend image and load it to Minikube:**
+
+   ```bash
+    docker build -t go-backend .
+    minikube image load go-backend
+   ```
+
+3. **Create secrets based on local env:**
+
+   ```bash
+    cd k8s
+    kubectl create secret generic go-backend-secrets --from-env-file=.env.backend
+    kubectl create secret generic mongodb-secrets --from-env-file=.env.mongo
+   ```
+
+4. **Apply the configs:**
+
+   ```bash
+    kubectl apply -f deployment.yml
+    kubectl apply -f service.yml
+    kubectl apply -f ingress.yml
+   ```
+
+5. **Access the service:**
+
+   ```bash
+    # Get the Minikube IP
+    minikube ip
+    # Test the app
+    curl http://<minikube_ip>/health
+   ```
 
 ## Authors & Acknowledgments
 
-- **Triips-TheCoder** - *Developer* - [GitHub](https://github.com/Triips-TheCoder)
-- **NicoooM** - *Developer* - [GitHub](https://github.com/NicoooM)
-- **lucasboucher** - *Developer* - [GitHub](https://github.com/lucasboucher)
-- **PaulMazeau** - *Developer* - [GitHub](https://github.com/PaulMazeau)
+- **Triips-TheCoder** - _Developer_ - [GitHub](https://github.com/Triips-TheCoder)
+- **NicoooM** - _Developer_ - [GitHub](https://github.com/NicoooM)
+- **lucasboucher** - _Developer_ - [GitHub](https://github.com/lucasboucher)
+- **PaulMazeau** - _Developer_ - [GitHub](https://github.com/PaulMazeau)
