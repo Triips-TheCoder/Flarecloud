@@ -13,6 +13,10 @@ import (
 	service "flarecloud/internal/services"
 )
 
+func applyMiddlewares(handler http.Handler) http.Handler {
+	return middleware.EnableCORS(middleware.LoggingMiddleware(middleware.LimitMiddleware(handler)))
+}
+
 func main() {
 	env.LoadEnv()
 	client := database.ConnectMongoDB()
@@ -26,14 +30,15 @@ func main() {
 	authService := service.NewAuthService(userCollection)
 	authHandler := handlers.NewAuthHandler(authService)
 
-	http.Handle("/health", middleware.LoggingMiddleware(http.HandlerFunc(handlers.HealthHandler)))
-	http.Handle("/signup", middleware.LoggingMiddleware(http.HandlerFunc(authHandler.SignUp)))
-	http.Handle("/login", middleware.LoggingMiddleware(http.HandlerFunc(authHandler.Login)))
 
-	http.HandleFunc("/upload", handlers.UploadFileHandler)
-	http.HandleFunc("/download", handlers.DownloadFileHandler)
-	http.HandleFunc("/delete", handlers.DeleteFileHandler)
-	http.HandleFunc("/list", handlers.ListFilesHandler)
+	http.Handle("/health", applyMiddlewares(http.HandlerFunc(handlers.HealthHandler)))
+	http.Handle("/captcha", applyMiddlewares(http.HandlerFunc(handlers.CaptchaHandler)))
+	http.Handle("/upload", applyMiddlewares(http.HandlerFunc(handlers.UploadFileHandler)))
+	http.Handle("/download", applyMiddlewares(http.HandlerFunc(handlers.DownloadFileHandler)))
+	http.Handle("/delete", applyMiddlewares(http.HandlerFunc(handlers.DeleteFileHandler)))
+	http.Handle("/list", applyMiddlewares(http.HandlerFunc(handlers.ListFilesHandler)))
+	http.Handle("/signup", applyMiddlewares(http.HandlerFunc(authHandler.SignUp)))
+	http.Handle("/login", applyMiddlewares(http.HandlerFunc(authHandler.Login)))
 
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
