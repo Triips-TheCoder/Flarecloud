@@ -1,8 +1,28 @@
 services:
   db:
     image: mongo
+    container_name: mongo-service
     ports:
       - "27017:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGODB_DATABASE}
+    # networks:
+    #   - backend
+  web:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    ports:
+      - 8080:8080
+    depends_on:
+      - db
+    container_name: golang-docker-web
+    env_file:
+      - .env
+    # networks:
+    #   - backend
+# networks:
+#   backend:
+#     driver: bridge
