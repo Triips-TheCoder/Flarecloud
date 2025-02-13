@@ -37,7 +37,10 @@ func InitMinio() {
 }
 
 func UploadFileHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseMultipartForm(10 << 20)
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		http.Error(w, "Erreur lors de l'analyse du formulaire multipart : "+err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	file, handler, err := r.FormFile("file")
 	if err != nil {
