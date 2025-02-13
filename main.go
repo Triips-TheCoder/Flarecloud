@@ -22,7 +22,8 @@ func main() {
 
 	handlers.InitMinio()
 
-	http.Handle("/health", middleware.LoggingMiddleware(http.HandlerFunc(handlers.HealthHandler)))
+  http.Handle("/health", middleware.LoggingMiddleware(middleware.LimitMiddleware(http.HandlerFunc(handlers.HealthHandler))))
+	http.HandleFunc("/captcha", handlers.CaptchaHandler)
 
 	http.HandleFunc("/upload", handlers.UploadFileHandler)
 	http.HandleFunc("/download", handlers.DownloadFileHandler)
