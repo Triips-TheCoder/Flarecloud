@@ -20,9 +20,10 @@ func main() {
 		}
 	}()
 
+	handlers.InitMinio()
+
 	http.Handle("/health", middleware.LoggingMiddleware(http.HandlerFunc(handlers.HealthHandler)))
 
-	// Routes pour la gestion des fichiers
 	http.HandleFunc("/upload", handlers.UploadFileHandler)
 	http.HandleFunc("/download", handlers.DownloadFileHandler)
 	http.HandleFunc("/delete", handlers.DeleteFileHandler)
