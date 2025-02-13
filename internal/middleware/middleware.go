@@ -4,19 +4,13 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"sync"
 	"time"
 
-	"github.com/dchest/captcha"
+	"flarecloud/internal/shared"
 )
 
 const requestLimit = 50
 const blockDuration = 1 * time.Minute
-
-type rateLimiter struct {
-	visits map[string]int
-	mutex  sync.Mutex
-}
 
 func LoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -27,25 +21,25 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-var limiter = rateLimiter{visits: make(map[string]int)}
 
 func LimitMiddleware(next http.Handler) http.Handler {
     return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
         ip, _, _ := net.SplitHostPort(r.RemoteAddr)
         log.Printf("Request from %s", ip)
 
-        limiter.mutex.Lock()
-        limiter.visits[ip]++
-        count := limiter.visits[ip]
-        limiter.mutex.Unlock()
+		limiter := shared.Limiter  // Utilise directement le pointeur
+        limiter.Mutex.Lock()
+        limiter.Visits[ip]++
+        count := limiter.Visits[ip]
+        limiter.Mutex.Unlock()
 
         log.Printf("Visits from %s: %d", ip, count)
 
         if count == 1 {
             time.AfterFunc(blockDuration, func() {
-                limiter.mutex.Lock()
-                delete(limiter.visits, ip)
-                limiter.mutex.Unlock()
+                limiter.Mutex.Lock()
+                delete(limiter.Visits, ip)
+                limiter.Mutex.Unlock()
                 log.Printf("Counter reset for %s", ip)
             })
         }
@@ -61,19 +55,3 @@ func LimitMiddleware(next http.Handler) http.Handler {
     })
 }
 
-func CaptchaHandler(w http.ResponseWriter, r *http.Request) {
-    if r.Method == http.MethodGet {
-        captchaID := captcha.New()
-        captcha.WriteImage(w, captchaID, 240, 80)
-    } else if r.Method == http.MethodPost {
-        if captcha.VerifyString(r.FormValue("captchaId"), r.FormValue("captchaSolution")) {
-            ip, _, _ := net.SplitHostPort(r.RemoteAddr)
-            limiter.mutex.Lock()
-            delete(limiter.visits, ip)  // Réinitialise l'IP après un captcha réussi
-            limiter.mutex.Unlock()
-            http.Redirect(w, r, "/", http.StatusSeeOther)
-        } else {
-            http.Error(w, "Captcha incorrect", http.StatusForbidden)
-        }
-    }
-}
