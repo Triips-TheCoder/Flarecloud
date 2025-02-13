@@ -11,6 +11,10 @@ import (
 	"flarecloud/internal/middleware"
 )
 
+func applyMiddlewares(handler http.Handler) http.Handler {
+	return middleware.EnableCORS(middleware.LoggingMiddleware(middleware.LimitMiddleware(handler)))
+}
+
 func main() {
 	env.LoadEnv()
 	client := database.ConnectMongoDB()
@@ -22,13 +26,15 @@ func main() {
 
 	handlers.InitMinio()
 
-  http.Handle("/health", middleware.LoggingMiddleware(middleware.LimitMiddleware(http.HandlerFunc(handlers.HealthHandler))))
-	http.HandleFunc("/captcha", handlers.CaptchaHandler)
+	
 
-	http.HandleFunc("/upload", handlers.UploadFileHandler)
-	http.HandleFunc("/download", handlers.DownloadFileHandler)
-	http.HandleFunc("/delete", handlers.DeleteFileHandler)
-	http.HandleFunc("/list", handlers.ListFilesHandler)
+	http.Handle("/health", applyMiddlewares(http.HandlerFunc(handlers.HealthHandler)))
+	http.Handle("/captcha", applyMiddlewares(http.HandlerFunc(handlers.CaptchaHandler)))
+	http.Handle("/upload", applyMiddlewares(http.HandlerFunc(handlers.UploadFileHandler)))
+	http.Handle("/download", applyMiddlewares(http.HandlerFunc(handlers.DownloadFileHandler)))
+	http.Handle("/delete", applyMiddlewares(http.HandlerFunc(handlers.DeleteFileHandler)))
+	http.Handle("/list", applyMiddlewares(http.HandlerFunc(handlers.ListFilesHandler)))
+	
 
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
