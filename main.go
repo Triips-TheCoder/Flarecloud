@@ -30,7 +30,6 @@ func main() {
 	http.Handle("/signup", middleware.LoggingMiddleware(http.HandlerFunc(authHandler.SignUp)))
 	http.Handle("/login", middleware.LoggingMiddleware(http.HandlerFunc(authHandler.Login)))
 
-	// Routes pour la gestion des fichiers
 	http.HandleFunc("/upload", handlers.UploadFileHandler)
 	http.HandleFunc("/download", handlers.DownloadFileHandler)
 	http.HandleFunc("/delete", handlers.DeleteFileHandler)

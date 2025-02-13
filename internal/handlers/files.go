@@ -6,25 +6,37 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"path/filepath"
-	"time"
 
-	"flarecloud/internal/database"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-const uploadPath = "uploads/"
+const (
+	endpoint        = "localhost:9000"
+	accessKeyID     = "minioadmin"
+	secretAccessKey = "minioadmin"
+	bucketName      = "cdn-bucket"
+	useSSL          = false
+)
 
-func init() {
-	if err := os.MkdirAll(uploadPath, os.ModePerm); err != nil {
-		log.Fatalf("Erreur création du dossier de stockage : %v", err)
+var minioClient *minio.Client
+
+func InitMinio() {
+	var err error
+	minioClient, err = minio.New(endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(accessKeyID, secretAccessKey, ""),
+		Secure: useSSL,
+	})
+	if err != nil {
+		log.Fatalf("Impossible d'initialiser MinIO : %v", err)
 	}
+
+	log.Println("✅ MinIO connecté avec succès")
 }
 
 func UploadFileHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseMultipartForm(10 << 20) // 10MB max 
+	r.ParseMultipartForm(10 << 20)
 
 	file, handler, err := r.FormFile("file")
 	if err != nil {
@@ -33,34 +45,24 @@ func UploadFileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	filePath := filepath.Join(uploadPath, handler.Filename)
+	objectName := filepath.Base(handler.Filename)
+	contentType := handler.Header.Get("Content-Type")
 
-	dst, err := os.Create(filePath)
+	_, err = minioClient.PutObject(
+		context.Background(),
+		bucketName,
+		objectName,
+		file,
+		handler.Size,
+		minio.PutObjectOptions{ContentType: contentType},
+	)
 	if err != nil {
-		http.Error(w, "Erreur de stockage du fichier", http.StatusInternalServerError)
-		return
-	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, file); err != nil {
-		http.Error(w, "Erreur lors de la copie", http.StatusInternalServerError)
-		return
-	}
-
-	collection := database.Client.Database("cdn").Collection("files")
-	_, err = collection.InsertOne(context.Background(), bson.M{
-		"name":      handler.Filename,
-		"path":      filePath,
-		"size":      handler.Size,
-		"uploaded":  time.Now(),
-	})
-	if err != nil {
-		http.Error(w, "Erreur sauvegarde metadata", http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Erreur upload vers MinIO : %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "Fichier %s uploadé avec succès\n", handler.Filename)
+	fmt.Fprintf(w, "✅ Fichier %s uploadé avec succès dans MinIO\n", objectName)
 }
 
 func DownloadFileHandler(w http.ResponseWriter, r *http.Request) {
@@ -70,23 +72,18 @@ func DownloadFileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath := filepath.Join(uploadPath, fileName)
-
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+	object, err := minioClient.GetObject(context.Background(), bucketName, fileName, minio.GetObjectOptions{})
+	if err != nil {
 		http.Error(w, "Fichier introuvable", http.StatusNotFound)
 		return
 	}
-
-	file, err := os.Open(filePath)
-	if err != nil {
-		http.Error(w, "Erreur ouverture fichier", http.StatusInternalServerError)
-		return
-	}
-	defer file.Close()
+	defer object.Close()
 
 	w.Header().Set("Content-Disposition", "attachment; filename="+fileName)
 	w.Header().Set("Content-Type", "application/octet-stream")
-	http.ServeFile(w, r, filePath)
+	if _, err := io.Copy(w, object); err != nil {
+		http.Error(w, "Erreur de téléchargement", http.StatusInternalServerError)
+	}
 }
 
 func DeleteFileHandler(w http.ResponseWriter, r *http.Request) {
@@ -96,41 +93,31 @@ func DeleteFileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath := filepath.Join(uploadPath, fileName)
-
-	if err := os.Remove(filePath); err != nil {
+	err := minioClient.RemoveObject(context.Background(), bucketName, fileName, minio.RemoveObjectOptions{})
+	if err != nil {
 		http.Error(w, "Erreur suppression fichier", http.StatusInternalServerError)
 		return
 	}
 
-	collection := database.Client.Database("cdn").Collection("files")
-	_, err := collection.DeleteOne(context.Background(), bson.M{"name": fileName})
-	if err != nil {
-		http.Error(w, "Erreur suppression metadata", http.StatusInternalServerError)
-		return
-	}
-
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "Fichier %s supprimé avec succès\n", fileName)
+	fmt.Fprintf(w, "🗑️ Fichier %s supprimé avec succès\n", fileName)
 }
 
 func ListFilesHandler(w http.ResponseWriter, r *http.Request) {
-	collection := database.Client.Database("cdn").Collection("files")
+	ctx := context.Background()
+	objectCh := minioClient.ListObjects(ctx, bucketName, minio.ListObjectsOptions{Recursive: true})
 
-	cursor, err := collection.Find(context.Background(), bson.M{}, options.Find())
-	if err != nil {
-		http.Error(w, "Erreur récupération fichiers", http.StatusInternalServerError)
-		return
-	}
-	defer cursor.Close(context.Background())
-
-	var files []bson.M
-	if err = cursor.All(context.Background(), &files); err != nil {
-		http.Error(w, "Erreur traitement fichiers", http.StatusInternalServerError)
-		return
+	files := []string{}
+	for object := range objectCh {
+		if object.Err != nil {
+			http.Error(w, fmt.Sprintf("Erreur listing : %v", object.Err), http.StatusInternalServerError)
+			return
+		}
+		files = append(files, object.Key)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintf(w, "%v", files)
+	for _, file := range files {
+		fmt.Fprintf(w, "📂 %s\n", file)
+	}
 }
