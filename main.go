@@ -20,7 +20,9 @@ func main() {
 		}
 	}()	
 
-	http.Handle("/health", middleware.LoggingMiddleware(http.HandlerFunc(handlers.HealthHandler)))
+    http.Handle("/health", middleware.LoggingMiddleware(middleware.LimitMiddleware(http.HandlerFunc(handlers.HealthHandler))))
+	http.HandleFunc("/captcha", middleware.CaptchaHandler)
+
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
