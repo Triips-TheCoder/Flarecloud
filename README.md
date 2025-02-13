@@ -80,7 +80,8 @@ The goal is to design a CDN server capable of:
 3. **Create secrets based on local env:**
 
    ```bash
-    kubectl create secret generic go-backend-secrets --from-env-file=.env
+    cd k8s
+    kubectl create secret generic go-backend-secrets --from-env-file=.env.backend
     kubectl create secret generic mongodb-secrets --from-env-file=.env.mongo
    ```
 

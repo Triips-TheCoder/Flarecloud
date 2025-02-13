@@ -27,6 +27,7 @@ go.work
 .env
 .env.local
 .env.mongo
+.env.backend
 
 # Log files
 *.log

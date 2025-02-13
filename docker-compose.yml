@@ -8,8 +8,8 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD}
       MONGO_INITDB_DATABASE: ${MONGODB_DATABASE}
-    networks:
-      - backend
+    # networks:
+    #   - backend
   web:
     build:
       context: .
@@ -21,9 +21,8 @@ services:
     container_name: golang-docker-web
     env_file:
       - .env
-    networks:
-      - backend
-
-networks:
-  backend:
-    driver: bridge
+    # networks:
+    #   - backend
+# networks:
+#   backend:
+#     driver: bridge

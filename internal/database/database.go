@@ -18,6 +18,8 @@ func ConnectMongoDB() *mongo.Client {
 		mongoURI = "mongodb://localhost:27017" // Default to local MongoDB
 	}
 
+	log.Printf("Connecting to MongoDB at %s", mongoURI)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
