@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"time"
 
@@ -18,5 +19,7 @@ func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Service is available"))
+	if _, err := w.Write([]byte("Service is available")); err != nil {
+		log.Printf("Error writing response: %v", err)
+	}
 }
