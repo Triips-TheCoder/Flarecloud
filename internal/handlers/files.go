@@ -6,16 +6,17 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
 
-const (
+var (
 	endpoint        = "localhost:9000"
-	accessKeyID     = "minioadmin"
-	secretAccessKey = "minioadmin"
+	accessKeyID     = os.Getenv("MINIO_ROOT_USER")
+	secretAccessKey = os.Getenv("MINIO_ROOT_PASSWORD")
 	bucketName      = "cdn-bucket"
 	useSSL          = false
 )
