@@ -425,7 +425,11 @@ func ListFilesHandler(w http.ResponseWriter, r *http.Request) {
         // Cache hit, return the cached response
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(http.StatusOK)
-        w.Write([]byte(cachedResponse))
+        _, err := w.Write([]byte(cachedResponse))
+        if err != nil {
+            http.Error(w, "Erreur lors de l'envoi de la réponse", http.StatusInternalServerError)
+            return
+        }
     }
 }
 
