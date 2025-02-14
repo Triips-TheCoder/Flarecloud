@@ -42,14 +42,6 @@ func main() {
 	http.Handle("/signup", applyMiddlewares(http.HandlerFunc(authHandler.SignUp)))
 	http.Handle("/login", applyMiddlewares(http.HandlerFunc(authHandler.Login)))
 
-	userCollection := client.Database(os.Getenv("MONGODB_DATABASE")).Collection("users")
-	authService := service.NewAuthService(userCollection)
-	authHandler := handlers.NewAuthHandler(authService)
-
-	http.Handle("/health", applyMiddlewares(http.HandlerFunc(handlers.HealthHandler)))
-	http.Handle("/signup", applyMiddlewares(http.HandlerFunc(authHandler.SignUp)))
-	http.Handle("/login", applyMiddlewares(http.HandlerFunc(authHandler.Login)))
-
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
