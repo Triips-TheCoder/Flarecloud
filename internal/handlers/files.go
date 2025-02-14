@@ -65,41 +65,6 @@ func InitMinio() {
 	log.Println("✅ MinIO connecté avec succès")
 }
 
-// func findOrCreateFolder(collection *mongo.Collection, folderPath string) (primitive.ObjectID, error) {
-// 	segments := strings.Split(folderPath, "/")
-// 	var parentID primitive.ObjectID
-
-// 	for _, segment := range segments {
-// 		if segment == "" {
-// 			continue
-// 		}
-
-// 		var folder Folder
-// 		filter := bson.M{"name": segment, "parent_id": parentID}
-// 		err := collection.FindOne(context.Background(), filter).Decode(&folder)
-
-// 		if err == mongo.ErrNoDocuments {
-// 			newFolder := Folder{
-// 				ID:        primitive.NewObjectID(),
-// 				Name:      segment,
-// 				CreatedAt: time.Now(),
-// 				ParentID:  parentID,
-// 			}
-// 			_, err := collection.InsertOne(context.Background(), newFolder)
-// 			if err != nil {
-// 				return primitive.NilObjectID, err
-// 			}
-// 			parentID = newFolder.ID
-// 		} else if err != nil {
-// 			return primitive.NilObjectID, err
-// 		} else {
-// 			parentID = folder.ID
-// 		}
-// 	}
-
-// 	return parentID, nil
-// }
-
 
 func UploadFileHandler(w http.ResponseWriter, r *http.Request) {
     collection := database.Client.Database("flarecloud").Collection("files")
@@ -431,6 +396,58 @@ func ListFilesHandler(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json")
     w.WriteHeader(http.StatusOK)
     if err := json.NewEncoder(w).Encode(response); err != nil {
+        http.Error(w, "Erreur lors de l'encodage de la réponse JSON", http.StatusInternalServerError)
+        return
+    }
+}
+
+func UpdateFileHandler(w http.ResponseWriter, r *http.Request) {
+    id := r.URL.Query().Get("id")
+    name := r.FormValue("name")
+    parentID := r.FormValue("parentId")
+
+    if name == "" && parentID == "" {
+        http.Error(w, "Nom et parentID manquants", http.StatusBadRequest)
+        return
+    }
+
+    // Convert id to ObjectID
+    objectID, err := primitive.ObjectIDFromHex(id)
+    if err != nil {
+        http.Error(w, "Invalid file ID", http.StatusBadRequest)
+        return
+    }
+
+    // update the database fields
+    filesCollection := database.Client.Database("flarecloud").Collection("files")
+
+    filter := bson.M{"_id": objectID}
+    update := bson.M{"$set": bson.M{}}
+
+    if name != "" {
+        update["$set"].(bson.M)["name"] = name
+    }
+    if parentID != "" {
+        parentObjectID, err := primitive.ObjectIDFromHex(parentID)
+        if err != nil {
+            http.Error(w, "Invalid parent ID", http.StatusBadRequest)
+            return
+        }
+        update["$set"].(bson.M)["parent_id"] = parentObjectID
+    }
+
+    _, err = filesCollection.UpdateOne(context.Background(), filter, update)
+    if err != nil {
+        http.Error(w, fmt.Sprintf("Error updating file: %v", err), http.StatusInternalServerError)
+        return
+    }
+
+    w.WriteHeader(http.StatusOK)
+    w.Header().Set("Content-Type", "application/json")
+    // message created
+    if err := json.NewEncoder(w).Encode(map[string]interface{}{
+        "message": "Fichier mis à jour avec succès",
+    }); err != nil {
         http.Error(w, "Erreur lors de l'encodage de la réponse JSON", http.StatusInternalServerError)
         return
     }

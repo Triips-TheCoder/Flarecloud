@@ -39,6 +39,7 @@ func main() {
 	http.Handle("/delete", applyMiddlewares(http.HandlerFunc(handlers.DeleteFileHandler)))
 	http.Handle("/delete-folder", applyMiddlewares(http.HandlerFunc(handlers.DeleteFolderHandler)))
 	http.Handle("/list", applyMiddlewares(http.HandlerFunc(handlers.ListFilesHandler)))
+	http.Handle("/update-file", applyMiddlewares(http.HandlerFunc(handlers.UpdateFileHandler)))
 	http.Handle("/signup", applyMiddlewares(http.HandlerFunc(authHandler.SignUp)))
 	http.Handle("/login", applyMiddlewares(http.HandlerFunc(authHandler.Login)))
 
