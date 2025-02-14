@@ -63,22 +63,27 @@ func (a *AuthService) SignUp(ctx context.Context, user models.UserSignUp) error 
 	return err
 }
 
-func (a *AuthService) Login(ctx context.Context, email, password string) (string, error) {
-	var user models.User
+func (a *AuthService) Login(ctx context.Context, userInput models.UserLogin) (string, error) {
 
-	err := a.userCollection.FindOne(ctx, bson.M{"email": email}).Decode(&user)
+	if err := validation.ValidateUserLogin(userInput); err != nil {
+		return "", err
+	}
+
+
+	var userFromDatabase models.User
+	err := a.userCollection.FindOne(ctx, bson.M{"email": userInput.Email}).Decode(&userFromDatabase)
 	if err != nil {
 		return "", errors.New("email not found")
 	}
 
 	
-	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+	if err = bcrypt.CompareHashAndPassword([]byte(userFromDatabase.Password), []byte(userInput.Password)); err != nil {
 		return "", errors.New("invalid credentials")
 	}
 
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": user.ID.Hex(),
+		"user_id": userFromDatabase.ID.Hex(),
 		"exp":     time.Now().Add(72 * time.Hour).Unix(),
 	})
 

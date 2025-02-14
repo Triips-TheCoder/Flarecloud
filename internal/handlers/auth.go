@@ -71,6 +71,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var input LoginInput
+
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)	
 		return
@@ -79,7 +80,13 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	token, err := h.authService.Login(ctx, input.Email, input.Password)
+	user := models.UserLogin{
+		Email: input.Email,
+		Password: input.Password,
+	}
+	
+
+	token, err := h.authService.Login(ctx, user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

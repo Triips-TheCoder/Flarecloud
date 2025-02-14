@@ -29,23 +29,21 @@ func ValidateUserSignUp(u models.UserSignUp) error {
 	return nil
 }
 
-// func ValidateUserLogin(u models.UserLogin) error {
-// 	err := Validator.Struct(u)
-// 	if err != nil {
-// 		validationErrors := err.(validator.ValidationErrors)
-// 		return UserValidationError(validationErrors)
-// 	}
-// 	return nil
-// }
+func ValidateUserLogin(u models.UserLogin) error {
+	err := Validator.Struct(u)
+	if err != nil {
+		validationErrors, ok := err.(validator.ValidationErrors)
+		
+		if ok {
+			userValidationError := UserValidationError{Errors: validationErrors}
+			return userValidationError.Error(validationErrors)
+		}
 
-// func ValidateUser(u models.User) error {
-// 	err := Validator.Struct(u)
-// 	if err != nil {
-// 		validationErrors := err.(validator.ValidationErrors)
-// 		return UserValidationError(validationErrors)
-// 	}
-// 	return nil
-// }
+		return err
+	}
+	return nil
+}
+
 
 func(e UserValidationError) Error(errors validator.ValidationErrors) error {
 	errorMessages := make([]string, 0)
