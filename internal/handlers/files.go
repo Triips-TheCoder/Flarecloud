@@ -233,7 +233,6 @@ func CreateFolderHandler(w http.ResponseWriter, r *http.Request) {
 
 func DownloadFileHandler(w http.ResponseWriter, r *http.Request) {
 	fileName := r.URL.Query().Get("path")
-    fileName = strings.Replace(fileName, "\"", "", -1)
 
 	if fileName == "" {
 		http.Error(w, "Nom du fichier manquant", http.StatusBadRequest)
