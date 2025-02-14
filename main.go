@@ -4,11 +4,13 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
 
 	"flarecloud/internal/database"
 	"flarecloud/internal/env"
 	"flarecloud/internal/handlers"
 	"flarecloud/internal/middleware"
+	service "flarecloud/internal/services"
 )
 
 func applyMiddlewares(handler http.Handler) http.Handler {
@@ -24,9 +26,10 @@ func main() {
 		}
 	}()
 
-	handlers.InitMinio()
+	userCollection := client.Database(os.Getenv("MONGODB_DATABASE")).Collection("users")
+	authService := service.NewAuthService(userCollection)
+	authHandler := handlers.NewAuthHandler(authService)
 
-	
 
 	http.Handle("/health", applyMiddlewares(http.HandlerFunc(handlers.HealthHandler)))
 	http.Handle("/captcha", applyMiddlewares(http.HandlerFunc(handlers.CaptchaHandler)))
@@ -36,7 +39,8 @@ func main() {
 	http.Handle("/delete", applyMiddlewares(http.HandlerFunc(handlers.DeleteFileHandler)))
 	http.Handle("/delete-folder", applyMiddlewares(http.HandlerFunc(handlers.DeleteFolderHandler)))
 	http.Handle("/list", applyMiddlewares(http.HandlerFunc(handlers.ListFilesHandler)))
-	
+	http.Handle("/signup", applyMiddlewares(http.HandlerFunc(authHandler.SignUp)))
+	http.Handle("/login", applyMiddlewares(http.HandlerFunc(authHandler.Login)))
 
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))

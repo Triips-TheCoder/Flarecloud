@@ -12,7 +12,9 @@ import (
 func HealthHandler(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-
+	
+	
+	log.Printf("Pinging MongoDB with client: %v", database.Client.Ping(ctx, nil))
 	if err := database.Client.Ping(ctx, nil); err != nil {
 		http.Error(w, "MongoDB not available", http.StatusServiceUnavailable)
 		return
