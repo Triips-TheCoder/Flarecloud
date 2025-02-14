@@ -65,41 +65,6 @@ func InitMinio() {
 	log.Println("✅ MinIO connecté avec succès")
 }
 
-// func findOrCreateFolder(collection *mongo.Collection, folderPath string) (primitive.ObjectID, error) {
-// 	segments := strings.Split(folderPath, "/")
-// 	var parentID primitive.ObjectID
-
-// 	for _, segment := range segments {
-// 		if segment == "" {
-// 			continue
-// 		}
-
-// 		var folder Folder
-// 		filter := bson.M{"name": segment, "parent_id": parentID}
-// 		err := collection.FindOne(context.Background(), filter).Decode(&folder)
-
-// 		if err == mongo.ErrNoDocuments {
-// 			newFolder := Folder{
-// 				ID:        primitive.NewObjectID(),
-// 				Name:      segment,
-// 				CreatedAt: time.Now(),
-// 				ParentID:  parentID,
-// 			}
-// 			_, err := collection.InsertOne(context.Background(), newFolder)
-// 			if err != nil {
-// 				return primitive.NilObjectID, err
-// 			}
-// 			parentID = newFolder.ID
-// 		} else if err != nil {
-// 			return primitive.NilObjectID, err
-// 		} else {
-// 			parentID = folder.ID
-// 		}
-// 	}
-
-// 	return parentID, nil
-// }
-
 
 func UploadFileHandler(w http.ResponseWriter, r *http.Request) {
     collection := database.Client.Database("flarecloud").Collection("files")
