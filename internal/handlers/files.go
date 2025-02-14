@@ -130,8 +130,7 @@ func UploadFileHandler(w http.ResponseWriter, r *http.Request) {
 
     contentType := handler.Header.Get("Content-Type")
 
-    // Generate a unique path using UUID
-    uniquePath := uuid.New().String() + "/" + handler.Filename
+    uniquePath :=  handler.Filename + uuid.New().String()
 
     _, err = minioClient.PutObject(
         context.Background(),
@@ -233,7 +232,9 @@ func CreateFolderHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func DownloadFileHandler(w http.ResponseWriter, r *http.Request) {
-	fileName := r.URL.Query().Get("file")
+	fileName := r.URL.Query().Get("path")
+    fileName = strings.Replace(fileName, "\"", "", -1)
+
 	if fileName == "" {
 		http.Error(w, "Nom du fichier manquant", http.StatusBadRequest)
 		return
