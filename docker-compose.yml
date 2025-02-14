@@ -48,4 +48,3 @@ services:
       ME_CONFIG_MONGODB_SERVER: mongo-service
     depends_on:
       - db
-
