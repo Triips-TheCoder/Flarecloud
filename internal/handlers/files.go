@@ -300,6 +300,47 @@ func DeleteFileHandler(w http.ResponseWriter, r *http.Request) {
     }
 }
 
+func DeleteFolderHandler(w http.ResponseWriter, r *http.Request) {
+    id := r.URL.Query().Get("id")
+    if id == "" {
+        http.Error(w, "Chemin manquant", http.StatusBadRequest)
+        return
+    }
+
+    ctx := context.Background()
+
+    // Convert id to ObjectID
+    objectID, err := primitive.ObjectIDFromHex(id)
+    if err != nil {
+        http.Error(w, "Invalid folder ID", http.StatusBadRequest)
+        return
+    }
+
+    // Delete from Database
+    foldersCollection := database.Client.Database("flarecloud").Collection("folders")
+    result, err := foldersCollection.DeleteOne(ctx, bson.M{"_id": objectID})
+    if err != nil {
+        http.Error(w, fmt.Sprintf("Erreur suppression de la base de données : %v", err), http.StatusInternalServerError)
+        return
+    }
+
+    if result.DeletedCount == 0 {
+        http.Error(w, "Dossier non trouvé", http.StatusNotFound)
+        return
+    }
+
+    w.WriteHeader(http.StatusOK)
+    w.Header().Set("Content-Type", "application/json")
+    // message created
+    if err := json.NewEncoder(w).Encode(map[string]interface{}{
+        "message": "Dossier supprimé avec succès",
+    }); err != nil {
+        http.Error(w, "Erreur lors de l'encodage de la réponse JSON", http.StatusInternalServerError)
+        return
+    }
+}
+
+
 func ListFilesHandler(w http.ResponseWriter, r *http.Request) {
     parentID := r.FormValue("parentId")
     var filter bson.M

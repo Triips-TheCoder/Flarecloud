@@ -34,6 +34,7 @@ func main() {
 	http.Handle("/create-folder", applyMiddlewares(http.HandlerFunc(handlers.CreateFolderHandler)))
 	http.Handle("/download", applyMiddlewares(http.HandlerFunc(handlers.DownloadFileHandler)))
 	http.Handle("/delete", applyMiddlewares(http.HandlerFunc(handlers.DeleteFileHandler)))
+	http.Handle("/delete-folder", applyMiddlewares(http.HandlerFunc(handlers.DeleteFolderHandler)))
 	http.Handle("/list", applyMiddlewares(http.HandlerFunc(handlers.ListFilesHandler)))
 	
 
