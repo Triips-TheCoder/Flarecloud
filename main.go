@@ -36,7 +36,7 @@ func main() {
 	http.Handle("/delete", applyMiddlewares(http.HandlerFunc(handlers.DeleteFileHandler)))
 	http.Handle("/delete-folder", applyMiddlewares(http.HandlerFunc(handlers.DeleteFolderHandler)))
 	http.Handle("/list", applyMiddlewares(http.HandlerFunc(handlers.ListFilesHandler)))
-	
+	http.Handle("/update-file", applyMiddlewares(http.HandlerFunc(handlers.UpdateFileHandler)))
 
 	log.Println("Server started on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
