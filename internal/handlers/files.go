@@ -164,9 +164,12 @@ func UploadFileHandler(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusCreated)
     w.Header().Set("Content-Type", "application/json")
     // message created
-    json.NewEncoder(w).Encode(map[string]interface{}{
+    if err := json.NewEncoder(w).Encode(map[string]interface{}{
         "message": "Fichier créé avec succès",
-    })
+    }); err != nil {
+        http.Error(w, "Erreur lors de l'encodage de la réponse JSON", http.StatusInternalServerError)
+        return
+    }
 }
 
 func CreateFolderHandler(w http.ResponseWriter, r *http.Request) {
@@ -221,9 +224,12 @@ func CreateFolderHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
     w.Header().Set("Content-Type", "application/json")
     // message created
-    json.NewEncoder(w).Encode(map[string]interface{}{
+    if err := json.NewEncoder(w).Encode(map[string]interface{}{
         "message": "Dossier créé avec succès",
-    })
+    }); err != nil {
+        http.Error(w, "Erreur lors de l'encodage de la réponse JSON", http.StatusInternalServerError)
+        return
+    }
 }
 
 func DownloadFileHandler(w http.ResponseWriter, r *http.Request) {
@@ -286,9 +292,12 @@ func DeleteFileHandler(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusOK)
     w.Header().Set("Content-Type", "application/json")
     // message created
-    json.NewEncoder(w).Encode(map[string]interface{}{
+    if err := json.NewEncoder(w).Encode(map[string]interface{}{
         "message": "Fichier supprimé avec succès",
-    })
+    }); err != nil {
+        http.Error(w, "Erreur lors de l'encodage de la réponse JSON", http.StatusInternalServerError)
+        return
+    }
 }
 
 func ListFilesHandler(w http.ResponseWriter, r *http.Request) {
