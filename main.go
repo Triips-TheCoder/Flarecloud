@@ -26,6 +26,8 @@ func main() {
 		}
 	}()
 
+	handlers.InitMinio()
+
 	userCollection := client.Database(os.Getenv("MONGODB_DATABASE")).Collection("users")
 	authService := service.NewAuthService(userCollection)
 	authHandler := handlers.NewAuthHandler(authService)
