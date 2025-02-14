@@ -13,14 +13,23 @@ import (
 
 	"flarecloud/internal/database"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 
-	// "go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
+
+
+var (
+    redisClient = redis.NewClient(&redis.Options{
+        Addr:     "localhost:6379", // Adjust the address as needed
+        Password: "root", // Retrieve the password from the environment variable
+    })
+)
+
 
 var (
 	endpoint        = "localhost:9000"
@@ -324,80 +333,99 @@ func ListFilesHandler(w http.ResponseWriter, r *http.Request) {
     ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
     defer cancel()
 
-    filesCollection := database.Client.Database("flarecloud").Collection("files")
-    foldersCollection := database.Client.Database("flarecloud").Collection("folders")
+    cacheKey := "files:" + parentID
+    cachedResponse, err := redisClient.Get(ctx, cacheKey).Result()
+    if err == redis.Nil {
+        // Cache miss, query the database
+        filesCollection := database.Client.Database("flarecloud").Collection("files")
+        foldersCollection := database.Client.Database("flarecloud").Collection("folders")
 
-    var files []File
-    cursor, err := filesCollection.Find(ctx, filter)
-    if err != nil {
-        http.Error(w, fmt.Sprintf("Error retrieving files: %v", err), http.StatusInternalServerError)
-        return
-    }
-    defer cursor.Close(ctx)
-
-    for cursor.Next(ctx) {
-        var file File
-        if err := cursor.Decode(&file); err != nil {
-            http.Error(w, fmt.Sprintf("Error decoding file record: %v", err), http.StatusInternalServerError)
+        var files []File
+        cursor, err := filesCollection.Find(ctx, filter)
+        if err != nil {
+            http.Error(w, fmt.Sprintf("Error retrieving files: %v", err), http.StatusInternalServerError)
             return
         }
-        files = append(files, file)
-    }
+        defer cursor.Close(ctx)
 
-    var folders []Folder
-    cursor, err = foldersCollection.Find(ctx, filter)
-    if err != nil {
-        http.Error(w, fmt.Sprintf("Error retrieving folders: %v", err), http.StatusInternalServerError)
-        return
-    }
-    defer cursor.Close(ctx)
+        for cursor.Next(ctx) {
+            var file File
+            if err := cursor.Decode(&file); err != nil {
+                http.Error(w, fmt.Sprintf("Error decoding file record: %v", err), http.StatusInternalServerError)
+                return
+            }
+            files = append(files, file)
+        }
 
-    for cursor.Next(ctx) {
-        var folder Folder
-        if err := cursor.Decode(&folder); err != nil {
-            http.Error(w, fmt.Sprintf("Error decoding folder record: %v", err), http.StatusInternalServerError)
+        var folders []Folder
+        cursor, err = foldersCollection.Find(ctx, filter)
+        if err != nil {
+            http.Error(w, fmt.Sprintf("Error retrieving folders: %v", err), http.StatusInternalServerError)
             return
         }
-        folders = append(folders, folder)
-    }
+        defer cursor.Close(ctx)
 
-    var history []map[string]interface{}
-    if parentID != "" {
-        currentID, _ := primitive.ObjectIDFromHex(parentID)
-        for {
+        for cursor.Next(ctx) {
             var folder Folder
-            err := foldersCollection.FindOne(ctx, bson.M{"_id": currentID}).Decode(&folder)
-            if err != nil {
-                break
+            if err := cursor.Decode(&folder); err != nil {
+                http.Error(w, fmt.Sprintf("Error decoding folder record: %v", err), http.StatusInternalServerError)
+                return
             }
-            history = append([]map[string]interface{}{{"name": folder.Name, "parentID": folder.ParentID}}, history...)
-            if folder.ParentID == primitive.NilObjectID {
-                break
+            folders = append(folders, folder)
+        }
+
+        var history []map[string]interface{}
+        if parentID != "" {
+            currentID, _ := primitive.ObjectIDFromHex(parentID)
+            for {
+                var folder Folder
+                err := foldersCollection.FindOne(ctx, bson.M{"_id": currentID}).Decode(&folder)
+                if err != nil {
+                    break
+                }
+                history = append([]map[string]interface{}{{"name": folder.Name, "parentID": folder.ParentID}}, history...)
+                if folder.ParentID == primitive.NilObjectID {
+                    break
+                }
+                currentID = folder.ParentID
             }
-            currentID = folder.ParentID
         }
-    }
 
-    for i := range folders {
-        if folders[i].ParentID == primitive.NilObjectID {
-            folders[i].ParentID = primitive.ObjectID{} // or any other default value
+        for i := range folders {
+            if folders[i].ParentID == primitive.NilObjectID {
+                folders[i].ParentID = primitive.ObjectID{} // or any other default value
+            }
         }
-    }
 
-    response := map[string]interface{}{
-        "files":   files,
-        "folders": folders,
-    }
+        response := map[string]interface{}{
+            "files":   files,
+            "folders": folders,
+        }
 
-    if parentID != "" {
-        response["history"] = history
-    }
+        if parentID != "" {
+            response["history"] = history
+        }
 
-    w.Header().Set("Content-Type", "application/json")
-    w.WriteHeader(http.StatusOK)
-    if err := json.NewEncoder(w).Encode(response); err != nil {
-        http.Error(w, "Erreur lors de l'encodage de la réponse JSON", http.StatusInternalServerError)
+        // Cache the response
+        responseJSON, err := json.Marshal(response)
+        if err == nil {
+            redisClient.Set(ctx, cacheKey, responseJSON, 10*time.Minute)
+        }
+
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusOK)
+        if err := json.NewEncoder(w).Encode(response); err != nil {
+            http.Error(w, "Erreur lors de l'encodage de la réponse JSON", http.StatusInternalServerError)
+            return
+        }
+    } else if err != nil {
+        http.Error(w, fmt.Sprintf("Error retrieving cache: %v", err), http.StatusInternalServerError)
         return
+    } else {
+        // Cache hit, return the cached response
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusOK)
+        w.Write([]byte(cachedResponse))
     }
 }
 

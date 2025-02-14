@@ -17,14 +17,19 @@ func applyMiddlewares(handler http.Handler) http.Handler {
 	return middleware.EnableCORS(middleware.LoggingMiddleware(middleware.LimitMiddleware(handler)))
 }
 
-func main() {
+func init() {
 	env.LoadEnv()
+}
+
+func main() {
 	client := database.ConnectMongoDB()
 	defer func() {
 		if err := client.Disconnect(context.Background()); err != nil {
 			log.Printf("Error disconnecting MongoDB client: %v", err)
 		}
 	}()
+
+	handlers.InitMinio()
 
 	userCollection := client.Database(os.Getenv("MONGODB_DATABASE")).Collection("users")
 	authService := service.NewAuthService(userCollection)
