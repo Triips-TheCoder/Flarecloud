@@ -31,6 +31,7 @@ func main() {
 	http.Handle("/health", applyMiddlewares(http.HandlerFunc(handlers.HealthHandler)))
 	http.Handle("/captcha", applyMiddlewares(http.HandlerFunc(handlers.CaptchaHandler)))
 	http.Handle("/upload", applyMiddlewares(http.HandlerFunc(handlers.UploadFileHandler)))
+	http.Handle("/create-folder", applyMiddlewares(http.HandlerFunc(handlers.CreateFolderHandler)))
 	http.Handle("/download", applyMiddlewares(http.HandlerFunc(handlers.DownloadFileHandler)))
 	http.Handle("/delete", applyMiddlewares(http.HandlerFunc(handlers.DeleteFileHandler)))
 	http.Handle("/list", applyMiddlewares(http.HandlerFunc(handlers.ListFilesHandler)))
