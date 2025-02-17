@@ -49,3 +49,10 @@ services:
       ME_CONFIG_MONGODB_SERVER: mongo-service
     depends_on:
       - db
+  redis:
+    image: redis/redis-stack
+    ports:
+      - "6379:6379"
+      - "8001:8001"
+    environment:
+      REDIS_ARGS: "--requirepass ${REDIS_PASSWORD}"
